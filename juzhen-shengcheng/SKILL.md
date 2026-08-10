@@ -26,6 +26,9 @@ metadata:
    │ build_matrix_data.py (Step A, 全自动)
    ▼
 matrix_data.json   ← 每定位: 总量/占比/品牌Top(类目内占比)/代表链接/尺寸打勾
+   │ analyze_categories.py (Step A2, 全自动, 可选)
+   ▼
+分析工作簿.xlsx    ← 分类占比 + 每定位垄断性分析(ASIN明细+自动总结) + 结构占比分析
    │ LLM 分析 (Step B): 读 data.json + 产品标题 → content.json
    ▼
 content.json       ← 每定位: 风格特点/颜色系列/使用场景/目标客户群/关键品质差异/细分类型/竞对情况
@@ -48,6 +51,16 @@ python scripts/build_matrix_data.py --input 打标表.xlsx [--sheet 工作表] -
 - 品牌明细：销量/销额 + 类目内占比（按销额降序）
 - **代表链接 = 定位内月销额最高 ASIN**（定位级，非品牌级——用户明确口径）
 - 尺寸打勾：商品尺寸(cm) → 尺寸列最近匹配（阈值 0.35，脏数据自动跳过）
+
+### Step A2（可选）: 生成分类分析工作簿（全自动）
+```bash
+python scripts/analyze_categories.py --input 打标表.xlsx --out 分析工作簿.xlsx \
+    --cat-col 定位列 --brand-col 品牌 --sales-col 月销量 --rev-col "月销售额($)" \
+    [--dim2-col 设计结构] [--currency $] [--market 美国]
+```
+- 产出 sheets：**分类占比**（每定位销量/销额/占比+竞争格局）、**<定位>市场分析**×N（垄断性分析总结+ASIN明细+累计占比）、**结构占比分析**（传 --dim2-col 时）
+- 总结规则：CR1≥40%显著寡头 / ≥20%头部集中 / <20%分散；头部打法判断（走量 vs 高客单）
+- 形态对齐用户示例（塑料垃圾桶 细分类目.xlsx 的分析 sheets）
 
 ### Step B: LLM 分析内容（唯一人工/LLM 环节）
 读 matrix_data.json + 产品标题/材料，产出 content.json：
@@ -91,4 +104,5 @@ python scripts/render_matrix.py --data matrix_data.json --content content.json \
 
 ## 文件
 - `scripts/build_matrix_data.py` — Step A: 打标表 → data.json（通用，列名全参数化）
+- `scripts/analyze_categories.py` — Step A2: 打标表 → 分类分析工作簿（分类占比/垄断分析/结构占比）
 - `scripts/render_matrix.py` — Step C: data.json+content.json → 竞对矩阵.xlsx（通用渲染）
