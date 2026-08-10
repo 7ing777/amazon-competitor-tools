@@ -52,15 +52,15 @@ python scripts/build_matrix_data.py --input 打标表.xlsx [--sheet 工作表] -
 - **代表链接 = 定位内月销额最高 ASIN**（定位级，非品牌级——用户明确口径）
 - 尺寸打勾：商品尺寸(cm) → 尺寸列最近匹配（阈值 0.35，脏数据自动跳过）
 
-### Step A2（可选）: 生成分类分析工作簿（全自动）
+### Step A2（可选）: 生成市场分析 sheets（全自动，格式对齐用户示例）
 ```bash
-python scripts/analyze_categories.py --input 打标表.xlsx --out 分析工作簿.xlsx \
-    --cat-col 定位列 --brand-col 品牌 --sales-col 月销量 --rev-col "月销售额($)" \
-    [--dim2-col 设计结构] [--currency $] [--market 美国]
+python scripts/analyze_categories.py --input 打标表.xlsx [--sheet 工作表] [--out 输出.xlsx] \
+    --cat-col 打开 --brand-col 品牌 --sales-col 月销量 --rev-col "月销售额($)" \
+    [--dim2-col 设计结构] [--price-col "价格($)"]
 ```
-- 产出 sheets：**分类占比**（每定位销量/销额/占比+竞争格局）、**<定位>市场分析**×N（垄断性分析总结+ASIN明细+累计占比）、**结构占比分析**（传 --dim2-col 时）
+- **输出 = 原表 + 追加 sheets**（用户口径：直接加在打标表上）：`<定位>垃圾桶`垄断性分析 ×N（行标签|求和项:月销售额($)|求和项:月销量2|销售额占比|销量占比|总结，ASIN明细+小数占比）、`设计结构占比分析`（定位→结构→ASIN层级）、`销量占比对比图`（折线图）、`价格分析`（按定位分组散点图）
 - 总结规则：CR1≥40%显著寡头 / ≥20%头部集中 / <20%分散；头部打法判断（走量 vs 高客单）
-- 形态对齐用户示例（塑料垃圾桶 细分类目.xlsx 的分析 sheets）
+- 列名不匹配时脚本会列出表头前 15 列
 
 ### Step B: LLM 分析内容（唯一人工/LLM 环节）
 读 matrix_data.json + 产品标题/材料，产出 content.json：
