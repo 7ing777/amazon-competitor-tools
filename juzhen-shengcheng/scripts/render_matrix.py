@@ -9,8 +9,9 @@ content.json 结构 (LLM 分析产出, 每定位):
              "quality": 关键品质差异, "size_text": 主要尺寸段, "note": 竞对情况,
              "subs": ["细分类型1", "细分类型2", ...]}}
   subs 顺序对应 data.json 中该定位 brands TopN 的顺序; 缺省 content 时描述列留空、每品牌一行。
+代表链接: data.json 品牌项带 rep_link 时=每行独立链接(不合并); 否则=定位级链接(块内合并)。
 列结构: 定位|风格特点|颜色系列|使用场景|目标客户群|关键品质差异|细分类型|主要尺寸段|尺寸打勾*N|
-        月销量(占比)|月销额(占比)|主要竞对|对标销量(占比)|对标销售额(占比)|代表链接(定位级合并)|竞对情况
+        月销量(占比)|月销额(占比)|主要竞对|对标销量(占比)|对标销售额(占比)|代表链接|竞对情况
 """
 import openpyxl, json, argparse, os
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -121,7 +122,7 @@ def main():
             ws.cell(row=r, column=base + n_sizes + 3, value=b['brand'] if b else None)
             ws.cell(row=r, column=base + n_sizes + 4, value=f"{fmt_n(b['sales'])}（{b['sales_share']}%）" if b else None)
             ws.cell(row=r, column=base + n_sizes + 5, value=f"{fmt_n(b['rev'])}（{b['rev_share']}%）" if b else None)
-            ws.cell(row=r, column=base + n_sizes + 6, value=c['rep_link'] if si == 0 else None)
+            ws.cell(row=r, column=base + n_sizes + 6, value=b.get('rep_link') if b and b.get('rep_link') else (c['rep_link'] if si == 0 else None))
             ws.cell(row=r, column=base + n_sizes + 7, value=ct.get('note') if si == 0 else None)
             for ci in range(1, n_total + 1):
                 cell = ws.cell(row=r, column=ci)
@@ -131,6 +132,9 @@ def main():
                 if ci in (1, 2, 3, 4, 5, 6, 8, base + n_sizes + 1, base + n_sizes + 2, base + n_sizes + 7):
                     cell.fill = fill
         for ci in (1, 2, 3, 4, 5, 6, 8, base + n_sizes + 1, base + n_sizes + 2, base + n_sizes + 6, base + n_sizes + 7):
+            # 代表链接列: 若品牌带 per-row rep_link 则不合并(每行独立链接); 否则按块合并
+            if ci == base + n_sizes + 6 and any(b.get('rep_link') for b in c['brands']):
+                continue
             if n > 1:
                 ws.merge_cells(start_row=r0, start_column=ci, end_row=r0 + n - 1, end_column=ci)
         row += n
