@@ -30,6 +30,11 @@ NUM = '#,##0'
 NUM2 = '#,##0.00'
 
 
+def style_sheet(ws, widths, last_col_letter):
+    for ci, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(ci)].width = w
+
+
 def make_summary(pos, n, sales, rev, items):
     """规则化生成垄断性分析总结 (ASIN级)"""
     if not items:
