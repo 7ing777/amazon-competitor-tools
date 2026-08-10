@@ -91,9 +91,13 @@ def main():
         d['n'] += 1
         d['sales'] += sales
         d['rev'] += rev
-        b = d['brands'].setdefault(brand, {'sales': 0, 'rev': 0})
+        b = d['brands'].setdefault(brand, {'sales': 0, 'rev': 0, 'top_asin': '', 'top_rev': 0, 'rep_link': ''})
         b['sales'] += sales
         b['rev'] += rev
+        if rev > b['top_rev']:
+            b['top_rev'] = rev
+            b['top_asin'] = asin
+            b['rep_link'] = link
         if rev > d['top_rev']:
             d['top_rev'] = rev
             d['top_asin'] = asin
@@ -122,7 +126,8 @@ def main():
             'rev_share': round(d['rev'] / grand['rev'] * 100),
             'brands': [{'brand': b, 'sales': round(v['sales']), 'rev': round(v['rev']),
                         'sales_share': round(v['sales'] / d['sales'] * 100),
-                        'rev_share': round(v['rev'] / d['rev'] * 100)} for b, v in brands],
+                        'rev_share': round(v['rev'] / d['rev'] * 100),
+                        'rep_asin': v['top_asin'], 'rep_link': v['rep_link']} for b, v in brands],
             'rep_asin': d['top_asin'], 'rep_link': d['rep_link'],
             'size_marks': sorted(d['size_marks']),
         })
