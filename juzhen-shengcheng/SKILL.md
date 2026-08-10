@@ -63,9 +63,11 @@ python scripts/build_matrix_data.py --input 打标表.xlsx [--sheet 工作表] -
 ### Step C: 渲染矩阵（脚本）
 ```bash
 python scripts/render_matrix.py --data matrix_data.json --content content.json \
-    --out 竞对矩阵.xlsx --title "德站相框矩阵（Top100 BSR）" [--order "定位A,定位B,..."]
+    --out 竞对矩阵.xlsx --title "德站相框矩阵（Top100 BSR）" [--order "定位A,定位B,..."] \
+    [--currency "$"] [--market "美国"]
 ```
 - --order 控制定位显示顺序（缺省按 data.json 销额降序）
+- --currency/--market 适配站点：如美站传 `--currency "$" --market "美国"`（表头变"美国月销量"）
 - 输出格式与用户模板一致：合并单元格、定位块配色、尺寸分组表头（小/中/大）、冻结窗格
 
 ## 判定口径（与用户确认过的）

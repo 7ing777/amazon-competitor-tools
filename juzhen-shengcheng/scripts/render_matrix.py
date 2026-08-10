@@ -30,6 +30,8 @@ def main():
     ap.add_argument('--out', required=True)
     ap.add_argument('--title', default='竞对矩阵（Top100 BSR）')
     ap.add_argument('--order', default=None, help='定位显示顺序, 逗号分隔(缺省=data.json顺序)')
+    ap.add_argument('--currency', default='€', help='货币符号, 默认 €(可传 \$)')
+    ap.add_argument('--market', default='欧洲', help='站点/市场名, 用于表头如: 欧洲/美国')
     args = ap.parse_args()
 
     data = json.load(open(args.data, encoding='utf-8'))
@@ -82,7 +84,7 @@ def main():
     # R3 列头
     headers = ['定位', '风格特点', '颜色系列', '使用场景', '目标客户群', '关键品质差异', '细分类型', '主要尺寸段']
     headers += sizes
-    headers += ['欧洲月销量（市场占比）', '欧洲月销售额(市场占比）', '欧洲市场主要竞对',
+    headers += [f'{args.market}月销量（市场占比）', f'{args.market}月销售额(市场占比）', f'{args.market}市场主要竞对',
                 '对标竞对销量(类目占比）', '对标竞对销售额(类目占比）', '代表链接', '竞对情况']
     r3 = 3 if n_sizes else 2
     for ci, htxt in enumerate(headers, start=1):
@@ -115,7 +117,7 @@ def main():
                 name = sizes[ci - base - 1]
                 ws.cell(row=r, column=ci, value='√' if si == 0 and name in c.get('size_marks', []) else None)
             ws.cell(row=r, column=base + n_sizes + 1, value=f"{fmt_n(c['sales'])}（{c['sales_share']}%）" if si == 0 else None)
-            ws.cell(row=r, column=base + n_sizes + 2, value=f"{fmt_n(c['rev'])}€（{c['rev_share']}%）" if si == 0 else None)
+            ws.cell(row=r, column=base + n_sizes + 2, value=f"{fmt_n(c['rev'])}{args.currency}（{c['rev_share']}%）" if si == 0 else None)
             ws.cell(row=r, column=base + n_sizes + 3, value=b['brand'] if b else None)
             ws.cell(row=r, column=base + n_sizes + 4, value=f"{fmt_n(b['sales'])}（{b['sales_share']}%）" if b else None)
             ws.cell(row=r, column=base + n_sizes + 5, value=f"{fmt_n(b['rev'])}（{b['rev_share']}%）" if b else None)
