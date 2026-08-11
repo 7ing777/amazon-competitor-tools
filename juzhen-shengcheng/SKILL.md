@@ -52,7 +52,23 @@ python scripts/build_matrix_data.py --input 打标表.xlsx [--sheet 工作表] -
 - **代表链接 = 定位内月销额最高 ASIN**（定位级，非品牌级——用户明确口径）
 - 尺寸打勾：商品尺寸(cm) → 尺寸列最近匹配（阈值 0.35，脏数据自动跳过）
 
-### Step A2（可选）: 生成市场分析 sheets（全自动，格式对齐用户示例）
+## 分类分析默认实现（用户口径：**透视表版优先**）
+- 默认走 Step A2p: `make_pivot.py`（Excel COM 真实透视表）：分类占比(定位→ASIN) + 每定位概况(页筛选=定位,行=品牌) + 结构占比分析(定位→结构)，占比=% of column
+- **只有本机不支持**（无 Excel/WPS 或 pywin32）才退回：静态版(analyze_categories.py) → SUMIFS 公式版(formula_analysis.py)
+
+### Step A2p（默认）: 透视表版（需 Excel/WPS + pywin32）
+```bash
+python scripts/make_pivot.py --input 打标表.xlsx --out 输出-透视表版.xlsx \
+    --source-sheet Sheet1 --data-rows 200 --data-cols 76 \
+    --cat-col 打开 --brand-col 品牌 --asin-col ASIN --sales-col 月销量 --rev-col "月销售额($)" \
+    --cats "智能,按弹,脚踏,无盖,摆盖,翻盖,推拉无盖" --sheet-suffix 垃圾桶 \
+    [--dim2-col 设计结构] [--dim2-sheet "设计结构占比分析"] [--share-sheet 分类占比]
+```
+- 实测关键：`Calculation=7`=% of column；类目内占比用「报表筛选(页字段)+CurrentPage=定位」；必须 `gencache.EnsureDispatch`
+- 输入路径必须用**绝对路径**（Excel COM 不认识相对路径）
+- 透视表改数据后需手动刷新（右击→刷新）
+
+### Step A2（备用）: 静态市场分析 sheets（格式对齐用户示例）
 ```bash
 python scripts/analyze_categories.py --input 打标表.xlsx [--sheet 工作表] [--out 输出.xlsx] \
     --cat-col 打开 --brand-col 品牌 --sales-col 月销量 --rev-col "月销售额($)" \
@@ -71,14 +87,6 @@ python scripts/formula_analysis.py --input 分析工作簿.xlsx --source-sheet P
 - 用户要求"带公式数据"：分析 sheet 数字单元格 → SUMIFS 公式（定位合计=单条件，品牌行=定位+品牌双条件，ASIN 行=单条件），占比=单元格引用或 SUM 全量；改打标表后 Excel 打开自动重算（等同透视表）
 - 占比基数自动判定 within/grand；文本/总结保留；输出 = 输入-公式版.xlsx
 - 已验证：公式复算结果与原静态值 100% 一致（相框 4 概况 + 分类占比，564 公式单元格）
-
-### Step A3b（可选, 需本机 Excel/WPS + pywin32）: 真实透视表版
-```bash
-python scripts/make_pivot.py   # 内部改 SRC/OUT/列参数
-```
-- openpyxl **无法创建透视表**（只读/保留）→ 用 Excel COM（gencache.EnsureDispatch）等价手动插入透视表
-- 实测关键常量：`Calculation=7`=% of column；类目内占比用「报表筛选(页字段)+CurrentPage=定位」技巧（BaseField 赋值在 COM 下不可靠）
-- 透视表改数据后需手动刷新；SUMIFS 公式版（A3）打开自动重算——两版择一
 
 ### Step B: LLM 分析内容（唯一人工/LLM 环节）
 读 matrix_data.json + 产品标题/材料，产出 content.json：
