@@ -120,7 +120,7 @@ def main():
         def add_chart(ws, pt, title):
             ws.Activate()
             ws.Range('A3').Select()
-            shp = ws.Shapes.AddChart2(251, 51)  # 251=默认样式, 51=簇状柱形图
+            shp = ws.Shapes.AddChart2(251, 5)  # 251=默认样式, 5=xlPie 饼图
             cht = shp.Chart
             try:
                 cht.PivotLayout  # 若为透视表图则成功
@@ -128,8 +128,9 @@ def main():
                 cht.SetSourceData(pt.TableRange2)
             cht.HasTitle = True
             cht.ChartTitle.Text = title
-            cht.ChartTitle.Font.Size = 10
-            shp.Left, shp.Top, shp.Width, shp.Height = 560, 30, 430, 300
+            cht.ChartTitle.Font.Size = 11
+            # 放在总结框(H3:O10, 高约180px)下方, 避免重叠
+            shp.Left, shp.Top, shp.Width, shp.Height = 560, 210, 480, 320
             return cht
 
         def rebuild(sheet_name, pt_name, row1_col=None, row2_col=None, page_col=None, page_val=None, summary=None, chart_title=None):
@@ -154,17 +155,24 @@ def main():
             f4.Calculation = XL_PCT_COL
             pt.TableStyle2 = 'PivotStyleMedium9'
             if summary:
-                ws.Cells(3, 8).Value = summary
-                ws.Cells(3, 8).Font.Size = 9
-                ws.Cells(3, 8).WrapText = True
-                ws.Range(ws.Cells(3, 8), ws.Cells(3, 11)).Merge()
+                # 总结框: H3:O10 合并+边框+换行+行高, 保证全部文字可见
+                rng = ws.Range(ws.Cells(3, 8), ws.Cells(10, 15))
+                rng.Merge()
+                rng.Value = summary
+                rng.WrapText = True
+                rng.Font.Size = 9
+                rng.VerticalAlignment = -4160  # xlTop
+                rng.Borders.LineStyle = 1      # 细框线
+                rng.Borders.Weight = 2
+                for rr in range(3, 11):
+                    ws.Rows(rr).RowHeight = 18
             if chart_title:
-                add_chart(ws, pt, chart_title)
+                add_chart(ws, pt, chart_title)  # 饼图放总结框下方
             return pt
 
         # 1) 分类占比
         rebuild(args.share_sheet, '分类占比透视表', row1_col=args.cat_col, row2_col=args.asin_col,
-                summary=share_sum, chart_title='各定位销量/销售额占比')
+                summary=share_sum, chart_title='各定位月销量占比')
         # 2) 每定位概况 + 总结 + 透视图
         for pos in cats:
             items = cat_items.get(pos, [])
@@ -172,11 +180,11 @@ def main():
                               sum(i['rev'] for i in items), items)
             rebuild(f'{pos}{args.sheet_suffix}', f'{pos}透视表',
                     page_col=args.cat_col, page_val=pos, row1_col=args.brand_col,
-                    summary=sm, chart_title=f'{pos}品牌销量/销售额')
+                    summary=sm, chart_title=f'{pos}品牌月销量占比')
         # 3) 结构占比分析
         if args.dim2_col:
             rebuild(args.dim2_sheet, '结构占比透视表', row1_col=args.cat_col, row2_col=args.dim2_col,
-                    summary=d2_sum, chart_title='设计结构销量/销售额占比')
+                    summary=d2_sum, chart_title='设计结构月销量占比')
 
         wb.SaveAs(args.out)
         print(f'[✓] saved: {args.out}')
