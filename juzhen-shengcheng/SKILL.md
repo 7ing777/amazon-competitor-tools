@@ -72,6 +72,14 @@ python scripts/formula_analysis.py --input 分析工作簿.xlsx --source-sheet P
 - 占比基数自动判定 within/grand；文本/总结保留；输出 = 输入-公式版.xlsx
 - 已验证：公式复算结果与原静态值 100% 一致（相框 4 概况 + 分类占比，564 公式单元格）
 
+### Step A3b（可选, 需本机 Excel/WPS + pywin32）: 真实透视表版
+```bash
+python scripts/make_pivot.py   # 内部改 SRC/OUT/列参数
+```
+- openpyxl **无法创建透视表**（只读/保留）→ 用 Excel COM（gencache.EnsureDispatch）等价手动插入透视表
+- 实测关键常量：`Calculation=7`=% of column；类目内占比用「报表筛选(页字段)+CurrentPage=定位」技巧（BaseField 赋值在 COM 下不可靠）
+- 透视表改数据后需手动刷新；SUMIFS 公式版（A3）打开自动重算——两版择一
+
 ### Step B: LLM 分析内容（唯一人工/LLM 环节）
 读 matrix_data.json + 产品标题/材料，产出 content.json：
 ```json
