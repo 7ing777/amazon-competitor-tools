@@ -48,7 +48,9 @@ def auto_detect(header, cfg_cols, rows=None):
     }
     out = {}
     for key, al in aliases.items():
-        out[key] = cfg_cols.get(key) or next((a for a in al if a in header), '')
+        cfg_v = (cfg_cols.get(key) or '').strip()
+        # config 列名仅当真实存在于表头才生效, 否则回退别名自动识别
+        out[key] = cfg_v if cfg_v and cfg_v in header else next((a for a in al if a in header), '')
     # size_col 校验: 采样该列值, 必须含 cm 尺寸格式(如 50x70 / 21×29.7), 否则关闭
     if out['size_col'] and rows:
         si = header.index(out['size_col'])
@@ -106,10 +108,17 @@ def main():
         print('[X] 缺少列: %s\n    表头: %s' % (', '.join(missing), header[:20]))
         sys.exit(1)
 
-    # 定位列表自动识别
+    # 定位列表自动识别 + 实际数据行数(按 ASIN 非空, 不假设最后一行是说明行)
     ci = h.index(cols['cat_col'])
     cats = []
+    data_rows = 0
+    asin_i = h.index(cols['asin_col']) if cols['asin_col'] in h else None
     for r in rows[1:]:
+        if asin_i is not None and r[asin_i] is None:
+            continue
+        if not any(v is not None for v in r):
+            continue
+        data_rows += 1
         if r[ci]:
             v = str(r[ci]).strip()
             if v not in cats:
