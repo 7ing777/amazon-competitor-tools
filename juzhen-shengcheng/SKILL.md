@@ -128,8 +128,16 @@ python scripts/render_matrix.py --data matrix_data.json --content content.json \
 - 描述列（风格/场景/客户群等）每次由 LLM 基于该品类产品重新分析
 - 对标口径可改：默认销额 Top3，可换成销量 Top 或指定品牌
 
+## 其他工作人员部署（无需 Hermes/亚马逊账号/浏览器）
+- 一键入口：`scripts/run_analysis.bat`（双击→拖入打标表→自动出 透视表版分析+竞对矩阵）
+- 主程序 `scripts/run_analysis.py`：自动识别列名(常见别名)/定位列表/cm尺寸校验 → Step A → 透视表版(失败自动降级静态版) → 自动生成 content.json(规则总结,无需LLM) → 渲染矩阵
+- 配置：`scripts/config.ini`（列名/后缀/货币/市场/顺序）；说明：`scripts/README-部署说明.md`
+- 依赖：Python3 + openpyxl（透视表版再加 pywin32 + 本机 Excel/WPS）；不需要账号/浏览器/网络
+
 ## 文件
 - `scripts/build_matrix_data.py` — Step A: 打标表 → data.json（通用，列名全参数化）
-- `scripts/analyze_categories.py` — Step A2: 打标表 → 市场分析 sheets（格式对齐用户示例+图表）
+- `scripts/make_pivot.py` — Step A2p(默认): Excel COM 透视表版（总结框+饼图，自动降级）
+- `scripts/analyze_categories.py` — Step A2(降级): 静态市场分析 sheets（格式对齐用户示例+图表）
 - `scripts/formula_analysis.py` — Step A3: 静态分析 sheet → 实时 SUMIFS 公式版
 - `scripts/render_matrix.py` — Step C: data.json+content.json → 竞对矩阵.xlsx（通用渲染）
+- `scripts/run_analysis.py` / `run_analysis.bat` / `config.ini` / `README-部署说明.md` — 一键部署入口
