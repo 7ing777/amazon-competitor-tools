@@ -62,6 +62,16 @@ python scripts/analyze_categories.py --input 打标表.xlsx [--sheet 工作表] 
 - 总结规则：CR1≥40%显著寡头 / ≥20%头部集中 / <20%分散；头部打法判断（走量 vs 高客单）
 - 列名不匹配时脚本会列出表头前 15 列
 
+### Step A3（可选）: 静态分析 sheets → 实时公式版（全自动）
+```bash
+python scripts/formula_analysis.py --input 分析工作簿.xlsx --source-sheet Product-DE-Last-30-days \
+    --cat-col 相框类型 --brand-col 品牌 --asin-col ASIN --sales-col 月销量 --rev-col "月销售额(€)" \
+    --data-start 2 --data-end 71 --sheets "高端实木相框市场概况,中高端相框市场概况,分类占比"
+```
+- 用户要求"带公式数据"：分析 sheet 数字单元格 → SUMIFS 公式（定位合计=单条件，品牌行=定位+品牌双条件，ASIN 行=单条件），占比=单元格引用或 SUM 全量；改打标表后 Excel 打开自动重算（等同透视表）
+- 占比基数自动判定 within/grand；文本/总结保留；输出 = 输入-公式版.xlsx
+- 已验证：公式复算结果与原静态值 100% 一致（相框 4 概况 + 分类占比，564 公式单元格）
+
 ### Step B: LLM 分析内容（唯一人工/LLM 环节）
 读 matrix_data.json + 产品标题/材料，产出 content.json：
 ```json
@@ -104,5 +114,6 @@ python scripts/render_matrix.py --data matrix_data.json --content content.json \
 
 ## 文件
 - `scripts/build_matrix_data.py` — Step A: 打标表 → data.json（通用，列名全参数化）
-- `scripts/analyze_categories.py` — Step A2: 打标表 → 分类分析工作簿（分类占比/垄断分析/结构占比）
+- `scripts/analyze_categories.py` — Step A2: 打标表 → 市场分析 sheets（格式对齐用户示例+图表）
+- `scripts/formula_analysis.py` — Step A3: 静态分析 sheet → 实时 SUMIFS 公式版
 - `scripts/render_matrix.py` — Step C: data.json+content.json → 竞对矩阵.xlsx（通用渲染）
