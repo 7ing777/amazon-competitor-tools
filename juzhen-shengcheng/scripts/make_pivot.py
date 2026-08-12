@@ -153,6 +153,17 @@ def main():
             f4 = pt.AddDataField(pt.PivotFields(args.rev_col), f'{args.rev_col}占比', xlSum)
             f3.Calculation = XL_PCT_COL
             f4.Calculation = XL_PCT_COL
+            f3.NumberFormat = '0.00%'  # 占比列百分比显示
+            f4.NumberFormat = '0.00%'
+            # 行字段按 月销量 降序 (饼图顺序跟随, 从大到小); WPS 用方法调用形式
+            for rf_name in (row1_col, row2_col):
+                if rf_name:
+                    rf = pt.PivotFields(rf_name)
+                    try:
+                        rf.AutoSort(2, f'求和项:{args.sales_col}')  # WPS: 方法形式
+                    except Exception:
+                        rf.AutoSort = 2                            # Excel: 属性形式
+                        rf.AutoSortField = f'求和项:{args.sales_col}'
             pt.TableStyle2 = 'PivotStyleMedium9'
             if summary:
                 # 总结框: H3:O10 合并+边框+换行+行高, 保证全部文字可见

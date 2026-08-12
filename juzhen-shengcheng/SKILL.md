@@ -64,8 +64,10 @@ python scripts/make_pivot.py --input 打标表.xlsx --out 输出-透视表版.xl
     --cats "智能,按弹,脚踏,无盖,摆盖,翻盖,推拉无盖" --sheet-suffix 垃圾桶 \
     [--dim2-col 设计结构] [--dim2-sheet "设计结构占比分析"] [--share-sheet 分类占比]
 ```
-- 实测关键：`Calculation=7`=% of column；类目内占比用「报表筛选(页字段)+CurrentPage=定位」；必须 `gencache.EnsureDispatch`
-- 输入路径必须用**绝对路径**（Excel COM 不认识相对路径）
+- 实测关键：`Calculation=7`=% of column；类目内占比用「报表筛选(页字段)+CurrentPage=定位」；必须 `gencache.EnsureDispatch`；输入必须绝对路径
+- 占比列 `NumberFormat='0.00%'` 百分比显示；行字段降序排序 `rf.AutoSort(2,'求和项:月销量')`（WPS=方法调用形式, Excel=属性形式, 已双保险）→ 饼图顺序从大到小
+- 总计口径：每定位概况表总计=该定位总数（页筛选生效），分类占比表总计=全量总数（已验证 推拉无盖=2243 / 分类占比=669770）
+- 注意：本机 COM 实际解析为 **WPS Spreadsheets**（注册了 Excel.Application），对象模型略有差异（如 AutoSort 是方法、DataFields 遍历用 for 循环）
 - 透视表改数据后需手动刷新（右击→刷新）
 
 ### Step A2（备用）: 静态市场分析 sheets（格式对齐用户示例）
