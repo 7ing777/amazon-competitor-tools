@@ -148,10 +148,10 @@ def main():
                     ws.cell(row=r, column=4, value=f'=B{r}/B${cur_total[0]}').number_format = PCT
                     ws.cell(row=r, column=5, value=f'=C{r}/C${cur_total[0]}').number_format = PCT
                 converted += 2
-        print(f'  [✓] {sn}: 公式化完成 (占比基数: {base_mode})')
+        print(f'  [√] {sn}: 公式化完成 (占比基数: {base_mode})')
     out = args.out or (os.path.splitext(args.input)[0] + '-公式版.xlsx')
     wb.save(out)
-    print(f'[✓] saved: {out}  (写入 {converted} 个公式单元格)')
+    print(f'[√] saved: {out}  (写入 {converted} 个公式单元格)')
     print(f'  源表: {args.source_sheet} 数据行 {L}-{R} | 分类: {len(cat_set)} 个 | 全量: 销{grand_s:,.0f} 额{grand_r:,.0f}')
 
 

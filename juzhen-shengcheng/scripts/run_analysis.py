@@ -1,21 +1,38 @@
 # -*- coding: utf-8 -*-
 """
 一键分析入口 (给其他工作人员用, 无需 Hermes/亚马逊账号/浏览器)
-用法:
-  python run_analysis.py --input 打标表.xlsx [--config config.ini] [--out-prefix 输出名前缀]
+支持两种运行形态:
+  1) 源码:  python run_analysis.py --input 打标表.xlsx
+  2) EXE :  矩阵生成工具.exe 打标表.xlsx  (PyInstaller 打包, 内部函数调用不依赖 subprocess)
 流程(自动):
-  1. 读取打标表, 校验列名(可改 config.ini)
+  1. 读取打标表, 校验/自动识别列名(config.ini 优先, 存在才生效)
   2. 生成市场数据 data.json (build_matrix_data)
   3. 分类分析: 优先 透视表版(make_pivot, 需本机Excel/WPS+pywin32); 失败自动降级 静态版(analyze_categories)
   4. 自动生成 content.json (规则总结, 无需LLM)
   5. 渲染 竞对矩阵 (render_matrix)
-输出: <前缀>-透视表版.xlsx 或 <前缀>-市场分析.xlsx + <前缀>竞对矩阵.xlsx
 """
-import argparse, configparser, json, os, subprocess, sys, re
+import argparse, configparser, json, os, sys, re
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PY = sys.executable
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import build_matrix_data
+import make_pivot
+import analyze_categories
+import render_matrix
+
+
+def run_mod(mod, args):
+    """函数调用模式替代 subprocess (EXE 兼容)"""
+    old = sys.argv
+    sys.argv = ['app'] + args
+    try:
+        mod.main()
+    except SystemExit:
+        pass
+    finally:
+        sys.argv = old
 
 
 def load_cfg(path):
@@ -35,7 +52,7 @@ def header_of(path, sheet):
 
 
 def auto_detect(header, cfg_cols, rows=None):
-    """列名: 配置优先, 否则常见别名猜测; size_col 仅当值为 cm 尺寸格式才启用"""
+    """列名: 配置优先(仅当列存在), 否则常见别名猜测; size_col 仅当值为 cm 尺寸格式才启用"""
     aliases = {
         'cat_col': ['打开', '相框类型', '分类', '定位', '类别'],
         'brand_col': ['品牌', 'Brand'],
@@ -49,9 +66,7 @@ def auto_detect(header, cfg_cols, rows=None):
     out = {}
     for key, al in aliases.items():
         cfg_v = (cfg_cols.get(key) or '').strip()
-        # config 列名仅当真实存在于表头才生效, 否则回退别名自动识别
         out[key] = cfg_v if cfg_v and cfg_v in header else next((a for a in al if a in header), '')
-    # size_col 校验: 采样该列值, 必须含 cm 尺寸格式(如 50x70 / 21×29.7), 否则关闭
     if out['size_col'] and rows:
         si = header.index(out['size_col'])
         has_cm = any(re.search(r'\d+\s*[x×*]\s*\d+', str(r[si])) for r in rows[1:30] if r[si] is not None)
@@ -96,7 +111,6 @@ def main():
     out_prefix = args.out_prefix or os.path.splitext(args.input)[0]
     header, max_row, max_col, sheets = header_of(args.input, args.sheet)
     sheet_arg = args.sheet or sheets[0]
-    # 读行(定位识别 + 列名采样)
     import openpyxl
     wb = openpyxl.load_workbook(args.input, read_only=True)
     ws = wb[sheet_arg]
@@ -108,7 +122,6 @@ def main():
         print('[X] 缺少列: %s\n    表头: %s' % (', '.join(missing), header[:20]))
         sys.exit(1)
 
-    # 定位列表自动识别 + 实际数据行数(按 ASIN 非空, 不假设最后一行是说明行)
     ci = h.index(cols['cat_col'])
     cats = []
     data_rows = 0
@@ -124,46 +137,45 @@ def main():
             if v not in cats:
                 cats.append(v)
     wb.close()
-    data_rows = max_row - 1  # 最后一行多为说明行
     currency = cfg_params.get('currency', '€')
     market = cfg_params.get('market', '欧洲')
     title = cfg_params.get('title', f'{market}竞对矩阵（TOP{data_rows}）')
     suffix = cfg_params.get('sheet_suffix', '')
     order = cfg_params.get('order', '') or ','.join(cats)
 
-    print(f'[1/5] 数据: {len(cats)} 个定位 {", ".join(cats)} | 列: {cols}')
-    # Step A
-    link_args = ['--link-col', '商品详情页链接'] if '商品详情页链接' in header else []
+    print(f'[1/5] 数据: {data_rows} 行 / {len(cats)} 个定位: {", ".join(cats)}')
+    print(f'     列: {cols}')
+    # Step A: 市场数据
     size_args = ['--size-col', cols['size_col']] if cols['size_col'] else ['--no-sizes']
-    subprocess.run([PY, os.path.join(HERE, 'build_matrix_data.py'), '--input', args.input,
-                    '--sheet', sheet_arg, '--cat-col', cols['cat_col'], '--brand-col', cols['brand_col'],
-                    '--sales-col', cols['sales_col'], '--rev-col', cols['rev_col'], '--asin-col', cols['asin_col'],
-                    '--out', f'{out_prefix}_data.json'] + link_args + size_args,
-                   check=False)
-    # Step A2p: 透视表版
+    link_args = ['--link-col', '商品详情页链接'] if '商品详情页链接' in header else []
+    run_mod(build_matrix_data, ['--input', args.input, '--sheet', sheet_arg,
+            '--cat-col', cols['cat_col'], '--brand-col', cols['brand_col'],
+            '--sales-col', cols['sales_col'], '--rev-col', cols['rev_col'], '--asin-col', cols['asin_col'],
+            '--out', f'{out_prefix}_data.json'] + link_args + size_args)
+    # Step A2p: 透视表版 (失败自动降级静态版)
     pivot_ok = False
     if not args.skip_pivot:
-        r = subprocess.run([PY, os.path.join(HERE, 'make_pivot.py'), '--input', os.path.abspath(args.input),
-                            '--out', os.path.abspath(f'{out_prefix}-透视表版.xlsx'), '--source-sheet', sheet_arg,
-                            '--data-rows', str(data_rows), '--data-cols', str(max_col),
-                            '--cat-col', cols['cat_col'], '--brand-col', cols['brand_col'], '--asin-col', cols['asin_col'],
-                            '--sales-col', cols['sales_col'], '--rev-col', cols['rev_col'],
-                            '--cats', ','.join(cats), '--sheet-suffix', suffix,
-                            '--dim2-col', cols['dim2_col'] or '',
-                            '--dim2-sheet', cfg_params.get('dim2_sheet', '设计结构占比分析'),
-                            '--share-sheet', cfg_params.get('share_sheet', '分类占比')],
-                           capture_output=True, text=True)
-        if r.returncode == 0 and os.path.exists(f'{out_prefix}-透视表版.xlsx'):
-            pivot_ok = True
-            print(f'[2/5] 透视表版: ✓ {os.path.basename(out_prefix)}-透视表版.xlsx')
-        else:
-            print('[2/5] 透视表版失败(本机无Excel/WPS或pywin32?):', (r.stderr or r.stdout)[-160:])
-    if not pivot_ok:
-        subprocess.run([PY, os.path.join(HERE, 'analyze_categories.py'), '--input', args.input,
-                        '--sheet', sheet_arg, '--cat-col', cols['cat_col'], '--brand-col', cols['brand_col'],
-                        '--sales-col', cols['sales_col'], '--rev-col', cols['rev_col'], '--asin-col', cols['asin_col'],
-                        '--dim2-col', cols['dim2_col'] or '', '--price-col', cols['price_col'] or '',
-                        '--out', f'{out_prefix}-市场分析.xlsx'], check=False)
+        try:
+            run_mod(make_pivot, ['--input', os.path.abspath(args.input),
+                    '--out', os.path.abspath(f'{out_prefix}-透视表版.xlsx'), '--source-sheet', sheet_arg,
+                    '--data-rows', str(data_rows), '--data-cols', str(max_col),
+                    '--cat-col', cols['cat_col'], '--brand-col', cols['brand_col'], '--asin-col', cols['asin_col'],
+                    '--sales-col', cols['sales_col'], '--rev-col', cols['rev_col'],
+                    '--cats', ','.join(cats), '--sheet-suffix', suffix,
+                    '--dim2-col', cols['dim2_col'] or '',
+                    '--dim2-sheet', cfg_params.get('dim2_sheet', '设计结构占比分析'),
+                    '--share-sheet', cfg_params.get('share_sheet', '分类占比')])
+            pivot_ok = os.path.exists(f'{out_prefix}-透视表版.xlsx')
+        except Exception as e:
+            print('[2/5] 透视表版失败(本机无Excel/WPS?):', str(e)[:120])
+    if pivot_ok:
+        print(f'[2/5] 透视表版: √ {os.path.basename(out_prefix)}-透视表版.xlsx')
+    else:
+        run_mod(analyze_categories, ['--input', args.input, '--sheet', sheet_arg,
+                '--cat-col', cols['cat_col'], '--brand-col', cols['brand_col'],
+                '--sales-col', cols['sales_col'], '--rev-col', cols['rev_col'], '--asin-col', cols['asin_col'],
+                '--dim2-col', cols['dim2_col'] or '', '--price-col', cols['price_col'] or '',
+                '--out', f'{out_prefix}-市场分析.xlsx'])
         print(f'[2/5] 已降级为静态版: {os.path.basename(out_prefix)}-市场分析.xlsx')
     # Step B: 自动 content.json
     content = make_content(f'{out_prefix}_data.json', order.split(','))
@@ -171,11 +183,10 @@ def main():
         json.dump(content, f, ensure_ascii=False, indent=1)
     print('[3/5] content.json 已自动生成(规则总结)')
     # Step C: 矩阵
-    subprocess.run([PY, os.path.join(HERE, 'render_matrix.py'), '--data', f'{out_prefix}_data.json',
-                    '--content', f'{out_prefix}_content.json', '--out', f'{out_prefix}竞对矩阵.xlsx',
-                    '--title', title, '--currency', currency, '--market', market, '--order', order],
-                   check=False)
-    print(f'[4/5] 竞对矩阵: ✓ {os.path.basename(out_prefix)}竞对矩阵.xlsx')
+    run_mod(render_matrix, ['--data', f'{out_prefix}_data.json',
+            '--content', f'{out_prefix}_content.json', '--out', f'{out_prefix}竞对矩阵.xlsx',
+            '--title', title, '--currency', currency, '--market', market, '--order', order])
+    print(f'[4/5] 竞对矩阵: √ {os.path.basename(out_prefix)}竞对矩阵.xlsx')
     print('[5/5] 完成。交付文件:')
     print(f'  - {os.path.basename(out_prefix)}-透视表版.xlsx / -市场分析.xlsx (分类分析)')
     print(f'  - {os.path.basename(out_prefix)}竞对矩阵.xlsx (竞对矩阵)')

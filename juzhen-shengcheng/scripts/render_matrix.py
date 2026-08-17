@@ -152,7 +152,7 @@ def main():
     ws.freeze_panes = 'D%d' % (r3 + 1)
 
     wb.save(args.out)
-    print(f'[✓] saved: {args.out}  ({len(data["cats"])} 定位, {n_total} 列)')
+    print(f'[√] saved: {args.out}  ({len(data["cats"])} 定位, {n_total} 列)')
 
 
 if __name__ == '__main__':

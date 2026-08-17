@@ -198,7 +198,7 @@ def main():
                     summary=d2_sum, chart_title='设计结构月销量占比')
 
         wb.SaveAs(args.out)
-        print(f'[✓] saved: {args.out}')
+        print(f'[√] saved: {args.out}')
         print(f'  透视表+总结+透视图: 分类占比 + {len(cats)} 定位概况 + {"结构占比分析" if args.dim2_col else ""}')
     except Exception:
         import traceback

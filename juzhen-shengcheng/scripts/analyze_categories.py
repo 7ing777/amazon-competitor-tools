@@ -277,7 +277,7 @@ def main():
 
     out = args.out or (os.path.splitext(args.input)[0] + '-市场分析.xlsx')
     wb.save(out)
-    print(f'[✓] saved: {out}  (追加 {len(cats) + 3} 个 sheets 到原表)')
+    print(f'[√] saved: {out}  (追加 {len(cats) + 3} 个 sheets 到原表)')
     print(f'  垄断性分析 ×{len(cats)}: {", ".join(cats.keys())}')
     print(f'  {args.dim2_col}占比分析 | 销量占比对比图 | 价格分析')
 

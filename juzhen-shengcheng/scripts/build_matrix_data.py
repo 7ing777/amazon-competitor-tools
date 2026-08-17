@@ -140,7 +140,7 @@ def main():
     }
     with open(args.out, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=1)
-    print(f'[✓] {grand["n"]} 产品 / {len(out_cats)} 定位 -> {args.out}')
+    print(f'[√] {grand["n"]} 产品 / {len(out_cats)} 定位 -> {args.out}')
     for c in out_cats:
         print(f"  {c['pos']}: {c['n']}个 销{c['sales']:,}({c['sales_share']}%) 额{c['rev']:,}€({c['rev_share']}%) | 代表 {c['rep_asin']} | Top: {', '.join(b['brand'] for b in c['brands'][:3])}")
 

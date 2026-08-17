@@ -131,9 +131,12 @@ python scripts/render_matrix.py --data matrix_data.json --content content.json \
 - 对标口径可改：默认销额 Top3，可换成销量 Top 或指定品牌
 
 ## 其他工作人员部署（无需 Hermes/亚马逊账号/浏览器）
-- 一键入口：`scripts/run_analysis.bat`（双击→拖入打标表→自动出 透视表版分析+竞对矩阵）
-- 主程序 `scripts/run_analysis.py`：自动识别列名(常见别名)/定位列表/cm尺寸校验 → Step A → 透视表版(失败自动降级静态版) → 自动生成 content.json(规则总结,无需LLM) → 渲染矩阵
-- 配置：`scripts/config.ini`（列名/后缀/货币/市场/顺序）；说明：`scripts/README-部署说明.md`
+- **EXE 版（首选）**：`矩阵生成工具.exe`（PyInstaller 单文件 ~31MB）——双击运行或把打标表拖到 EXE 上，自动出 透视表版分析+竞对矩阵；无需装 Python
+  - 重建命令：`python -m PyInstaller --onefile --console --name 矩阵生成工具 --add-data "config.ini;." --hidden-import win32com.client --hidden-import pythoncom matrix_app.py`
+  - 陷阱：控制台 GBK 编码 → 脚本内统一用 `√`(U+221A) 而非 `✓`(U+2713)；matrix_app.py 入口 reconfigure stdout utf-8+errors=replace；EXE 内用函数调用模式(run_mod) 而非 subprocess(sys.executable 指向EXE会失效)
+  - EXE 依赖：透视表版仍需本机 Excel/WPS；无则自动降级静态版
+- 脚本版：`scripts/run_analysis.bat`（双击→拖入打标表）+ `config.ini` + `README-部署说明.md`
+- 主程序 `scripts/run_analysis.py`：自动识别列名(常见别名,config仅当列存在才生效)/定位列表/按ASIN实际行数/cm尺寸校验 → Step A → 透视表版(失败自动降级静态版) → 自动生成 content.json(规则总结,无需LLM) → 渲染矩阵
 - 依赖：Python3 + openpyxl（透视表版再加 pywin32 + 本机 Excel/WPS）；不需要账号/浏览器/网络
 
 ## 文件
